@@ -78,7 +78,7 @@ function App() {
         onSettingsClick={() => setShowSettings(true)}
         onAdminClick={() => setShowAdmin(true)}
       />
-      <ChatArea user={user} activeGroupId={activeGroupId} />
+      <ChatArea user={user} activeGroupId={activeGroupId} onBack={() => setActiveGroupId(null)} />
       
       {showSettings && (
         <SettingsModal user={user} onClose={() => setShowSettings(false)} />

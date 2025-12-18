@@ -27,10 +27,13 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
 
   return (
     <>
-    <div className="flex h-full w-20 flex-col items-center border-r border-glassBorder bg-black/10 py-6 md:w-80 md:items-stretch md:px-4">
+    <div className={`flex h-full flex-col items-center border-r border-glassBorder bg-black/10 py-6 transition-all duration-300 md:w-80 md:items-stretch md:px-4 ${
+      activeGroup ? 'hidden md:flex w-0' : 'w-full md:w-80'
+    }`}>
+
       {/* Header */}
       <div className="mb-6 flex items-center justify-between px-2">
-        <h1 className="hidden text-xl font-bold tracking-tight md:block">Groups</h1>
+        <h1 className={`${activeGroup ? 'hidden md:block' : 'block'} text-xl font-bold tracking-tight`}>Groups</h1>
         <button 
             onClick={() => setShowGroupModal(true)}
             className="rounded-full bg-primary/20 p-2 text-primary transition hover:bg-primary hover:text-white"
@@ -55,7 +58,7 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
               <Users size={20} />
             </div>
             
-            <div className="ml-3 hidden flex-1 overflow-hidden md:block">
+            <div className={`ml-3 flex-1 overflow-hidden ${activeGroup ? 'hidden md:block' : 'block'}`}>
                <h3 className="truncate text-sm font-semibold">{group.name}</h3>
                <p className="text-xs text-gray-400">Code: {group.code}</p>
             </div>
@@ -76,7 +79,7 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
                 className="flex w-full items-center justify-center rounded-lg bg-red-500/10 p-2 text-red-400 hover:bg-red-500 hover:text-white md:justify-start"
             >
             <Shield size={20} />
-            <span className="ml-2 hidden text-sm md:block">Admin Panel</span>
+            <span className={`ml-2 ${activeGroup ? 'hidden md:block' : 'block'} text-sm`}>Admin Panel</span>
             </button>
         )}
         
@@ -85,7 +88,7 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
             className="flex w-full items-center justify-center p-2 text-gray-400 hover:text-white md:justify-start"
         >
           <Settings size={20} />
-          <span className="ml-2 hidden text-sm md:block">Settings & Devices</span>
+          <span className={`ml-2 ${activeGroup ? 'hidden md:block' : 'block'} text-sm`}>Settings & Devices</span>
         </button>
 
         <button 
@@ -93,7 +96,7 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
            className="flex w-full items-center justify-center p-2 text-gray-400 hover:text-white md:justify-start"
         >
           <LogOut size={20} />
-          <span className="ml-2 hidden text-sm md:block">Logout</span>
+          <span className={`ml-2 ${activeGroup ? 'hidden md:block' : 'block'} text-sm`}>Logout</span>
         </button>
       </div>
     </div>
