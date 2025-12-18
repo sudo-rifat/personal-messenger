@@ -55,15 +55,13 @@ const AdminPanel = ({ onClose }) => {
     }
   };
 
-  const toggleAdmin = async (user) => {
-    if (user.username === "admin") return; // Safety
-    try {
-        await updateDoc(doc(db, "users", user.id), {
-            isAdmin: !user.isAdmin
-        });
-        setData(data.map(u => u.id === user.id ? { ...u, isAdmin: !u.isAdmin } : u));
-    } catch (err) {
-        alert("Failed to update status.");
+  const handleImpersonate = (targetUser) => {
+    if (window.confirm(`Switch to ${targetUser.username}'s account? You will see their messages and groups.`)) {
+        // Save admin session if we want to return? 
+        // For now, let's just do a direct switch
+        localStorage.setItem("skylark_user", JSON.stringify(targetUser));
+        localStorage.setItem("skylark_token", targetUser.activeToken || "impersonated");
+        window.location.reload();
     }
   };
 
@@ -71,6 +69,7 @@ const AdminPanel = ({ onClose }) => {
     const searchIn = activeTab === "users" ? item.username : item.name;
     return searchIn?.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
@@ -190,13 +189,11 @@ const AdminPanel = ({ onClose }) => {
                                         {activeTab === "users" ? (
                                             <>
                                                 <button 
-                                                    onClick={() => toggleAdmin(item)}
-                                                    className={`rounded-lg p-2 transition-colors ${
-                                                        item.isAdmin ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-gray-500/10 text-gray-400 hover:bg-primary/20 hover:text-primary'
-                                                    }`}
-                                                    title={item.isAdmin ? "Remove Admin" : "Demote to Admin"}
+                                                    onClick={() => handleImpersonate(item)}
+                                                    className="rounded-lg bg-indigo-500/10 p-2 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all"
+                                                    title="Access This Account"
                                                 >
-                                                    <Shield size={18} />
+                                                    <User size={18} />
                                                 </button>
                                                 {item.username !== "admin" && (
                                                     <button 
