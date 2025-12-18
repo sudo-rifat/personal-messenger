@@ -98,64 +98,85 @@ const Auth = ({ onLogin }) => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center p-6 relative overflow-hidden bg-[#020617]">
+       {/* Background Glows for Auth */}
+       <div className="pointer-events-none absolute -left-20 top-0 h-96 w-96 rounded-full bg-blue-600/10 blur-[100px]"></div>
+       <div className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-indigo-600/10 blur-[100px]"></div>
+
        <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md rounded-3xl border border-glassBorder bg-glass p-8 shadow-2xl backdrop-blur-xl"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-10 shadow-2xl backdrop-blur-3xl relative z-10"
        >
-          <div className="mb-8 flex justify-center">
-            <div className="rounded-full bg-primary/20 p-4">
-              <ShieldCheck size={48} className="text-primary" />
-            </div>
+          <div className="mb-10 flex flex-col items-center">
+             <div className="mb-6 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 p-5 shadow-xl shadow-blue-500/20">
+               <ShieldCheck size={40} className="text-white" />
+             </div>
+             <h2 className="text-4xl font-black tracking-tighter text-white">{isLogin ? "Sign In" : "Join Us"}</h2>
+             <p className="mt-2 text-sm font-medium text-gray-500 uppercase tracking-[0.2em]">
+               {isLogin ? "Secure Channel" : "Private Network"}
+             </p>
           </div>
 
-          <h2 className="mb-2 text-center text-3xl font-bold">{isLogin ? "Welcome Back" : "Create Account"}</h2>
-          <p className="mb-8 text-center text-gray-400">
-            {isLogin ? "Login to continue to message." : "Join the private network."}
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <User className="absolute left-4 top-3.5 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-12 pr-4 text-white placeholder-gray-500 outline-none focus:border-primary/50"
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+                <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-gray-500">Username</label>
+                <div className="relative group">
+                    <User className="absolute left-4 top-3.5 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={18} />
+                    <input
+                        type="text"
+                        placeholder="e.g. rifat_admin"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full rounded-2xl border border-white/5 bg-white/[0.03] py-3.5 pl-12 pr-4 text-white placeholder-gray-600 outline-none focus:border-blue-500/50 focus:bg-white/[0.08] transition-all"
+                    />
+                </div>
             </div>
             
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-gray-400" size={20} />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-12 pr-4 text-white placeholder-gray-500 outline-none focus:border-primary/50"
-              />
+            <div className="space-y-2">
+                <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-gray-500">Password</label>
+                <div className="relative group">
+                    <Lock className="absolute left-4 top-3.5 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={18} />
+                    <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-2xl border border-white/5 bg-white/[0.03] py-3.5 pl-12 pr-4 text-white placeholder-gray-600 outline-none focus:border-blue-500/50 focus:bg-white/[0.08] transition-all"
+                    />
+                </div>
             </div>
 
-            {error && <p className="text-center text-sm text-red-400">{error}</p>}
+            {error && (
+                <motion.div 
+                    initial={{ opacity: 0, x: -10 }} 
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center rounded-xl bg-red-500/10 p-3 text-xs font-bold text-red-400 border border-red-500/20"
+                >
+                    <ArrowRight size={14} className="mr-2 rotate-180" />
+                    {error}
+                </motion.div>
+            )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="group flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 font-semibold text-white shadow-lg transition-all hover:scale-[1.02] disabled:opacity-50"
+              className="group flex w-full items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 py-4 font-black uppercase tracking-widest text-white shadow-xl shadow-blue-900/40 transition-all disabled:opacity-50"
             >
-              {loading ? "Processing..." : (isLogin ? "Login Securely" : "Register Now")}
-              {!loading && <ArrowRight className="ml-2 transition-transform group-hover:translate-x-1" size={20} />}
-            </button>
+              {loading ? "Verifying..." : (isLogin ? "Authenticate" : "Create Account")}
+              {!loading && <ArrowRight className="ml-3 transition-transform group-hover:translate-x-1" size={18} />}
+            </motion.button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <button 
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-gray-400 hover:text-white hover:underline"
+              className="text-xs font-bold text-gray-500 hover:text-white transition-colors"
             >
-              {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
+              {isLogin ? "NEW HERE? CREATE AN ACCOUNT" : "ALREADY ENROLLED? SIGN IN"}
             </button>
           </div>
        </motion.div>
@@ -164,3 +185,4 @@ const Auth = ({ onLogin }) => {
 };
 
 export default Auth;
+

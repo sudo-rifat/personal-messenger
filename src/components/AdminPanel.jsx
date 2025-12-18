@@ -57,8 +57,15 @@ const AdminPanel = ({ onClose }) => {
 
   const handleImpersonate = (targetUser) => {
     if (window.confirm(`Switch to ${targetUser.username}'s account? You will see their messages and groups.`)) {
-        // Save admin session if we want to return? 
-        // For now, let's just do a direct switch
+        // Save current admin session to backup
+        const adminUser = localStorage.getItem("skylark_user");
+        const adminToken = localStorage.getItem("skylark_token");
+        
+        localStorage.setItem("skylark_admin_backup", JSON.stringify({ 
+            user: JSON.parse(adminUser), 
+            token: adminToken 
+        }));
+
         localStorage.setItem("skylark_user", JSON.stringify(targetUser));
         localStorage.setItem("skylark_token", targetUser.activeToken || "impersonated");
         window.location.reload();

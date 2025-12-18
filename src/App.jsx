@@ -36,9 +36,9 @@ function App() {
             const data = doc.data();
             const currentLocalToken = localStorage.getItem("skylark_token");
 
-            // If the active token in DB is different from local token, LOGOUT
-            if (data.activeToken && data.activeToken !== currentLocalToken) {
-                alert("You have been logged out because this account was accessed from another device.");
+            // Logout if token doesn't match OR if activeToken has been cleared (Revoked)
+            if (currentLocalToken && (!data.activeToken || data.activeToken !== currentLocalToken)) {
+                alert("Your session has ended. Either you logged in elsewhere or the device was removed.");
                 handleLogout();
             }
             
@@ -53,6 +53,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("skylark_user");
     localStorage.removeItem("skylark_token");
+    localStorage.removeItem("skylark_admin_backup");
     setUser(null);
     setActiveGroupId(null);
   };
@@ -61,7 +62,20 @@ function App() {
     setUser(userData);
   };
 
+  const handleReturnToAdmin = () => {
+    const backup = localStorage.getItem("skylark_admin_backup");
+    if (backup) {
+        const { user: adminUser, token: adminToken } = JSON.parse(backup);
+        localStorage.setItem("skylark_user", JSON.stringify(adminUser));
+        localStorage.setItem("skylark_token", adminToken);
+        localStorage.removeItem("skylark_admin_backup");
+        window.location.reload();
+    }
+  };
+
   if (loading) return <div className="text-white">Loading...</div>;
+
+  const isImpersonating = !!localStorage.getItem("skylark_admin_backup");
 
   if (!user) {
     return <Auth onLogin={handleLogin} />;
@@ -69,16 +83,38 @@ function App() {
 
   return (
     <Layout>
-      {/* Pass user and logout handler to children */}
-      <Sidebar 
-        user={user} 
-        onLogout={handleLogout} 
-        activeGroup={activeGroupId}
-        setActiveGroup={setActiveGroupId}
-        onSettingsClick={() => setShowSettings(true)}
-        onAdminClick={() => setShowAdmin(true)}
-      />
-      <ChatArea user={user} activeGroupId={activeGroupId} onBack={() => setActiveGroupId(null)} />
+      <div className="flex h-full w-full flex-col overflow-hidden">
+        {isImpersonating && (
+          <motion.div 
+            initial={{ y: -50 }}
+            animate={{ y: 0 }}
+            className="z-[100] flex w-full shrink-0 items-center justify-between bg-gradient-to-r from-red-600 to-orange-600 px-4 py-2 text-white shadow-lg border-b border-white/10"
+          >
+               <div className="flex items-center text-xs md:text-sm font-bold">
+                  <span className="mr-2 h-2 w-2 rounded-full bg-white animate-pulse"></span>
+                  ADMIN ACCESS: {user.username}
+               </div>
+               <button 
+                  onClick={handleReturnToAdmin}
+                  className="rounded-lg bg-white/20 px-3 py-1.5 text-[10px] md:text-xs font-black uppercase hover:bg-white hover:text-red-600 transition-all border border-white/20 shadow-inner"
+               >
+                  Exit Session
+               </button>
+          </motion.div>
+        )}
+        
+        <div className="flex flex-1 overflow-hidden relative">
+          <Sidebar 
+            user={user} 
+            onLogout={handleLogout} 
+            activeGroup={activeGroupId}
+            setActiveGroup={setActiveGroupId}
+            onSettingsClick={() => setShowSettings(true)}
+            onAdminClick={() => setShowAdmin(true)}
+          />
+          <ChatArea user={user} activeGroupId={activeGroupId} onBack={() => setActiveGroupId(null)} />
+        </div>
+      </div>
       
       {showSettings && (
         <SettingsModal user={user} onClose={() => setShowSettings(false)} />
@@ -90,5 +126,7 @@ function App() {
     </Layout>
   );
 }
+
+
 
 export default App;
