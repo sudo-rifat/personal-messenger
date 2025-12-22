@@ -28,6 +28,29 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
     }
   };
 
+  const handleDeleteAllOther = async () => {
+    const otherDevicesCount = user.devices?.filter(d => d.id !== user.activeToken).length || 0;
+    
+    if (otherDevicesCount === 0) {
+        alert("No other devices to remove.");
+        return;
+    }
+
+    if (window.confirm(`CAUTION: This will log out ${otherDevicesCount} other device(s). Only your current device will remain active. Proceed?`)) {
+        try {
+            const userRef = doc(db, "users", user.uid);
+            // Keep only current device
+            const currentDevice = user.devices.find(d => d.id === user.activeToken);
+            const updatedDevices = currentDevice ? [currentDevice] : [];
+            
+            await updateDoc(userRef, { devices: updatedDevices });
+        } catch (err) {
+            console.error("Error removing devices:", err);
+            alert("Failed to remove devices.");
+        }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <motion.div 
@@ -119,6 +142,17 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
                     </div>
                 )}
             </div>
+            
+            {/* Delete All Other Devices Button */}
+            {user.devices && user.devices.filter(d => d.id !== user.activeToken).length > 0 && (
+                <button
+                    onClick={handleDeleteAllOther}
+                    className="w-full mt-3 rounded-lg bg-red-500/5 py-2.5 text-red-400 hover:bg-red-500/10 transition-all text-xs font-bold uppercase tracking-widest border border-red-500/20 flex items-center justify-center"
+                >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete All Other Devices ({user.devices.filter(d => d.id !== user.activeToken).length})
+                </button>
+            )}
           </div>
         </div>
         

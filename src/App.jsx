@@ -27,6 +27,13 @@ function App() {
     setLoading(false);
   }, []);
 
+  // Request Notification Permission
+  useEffect(() => {
+    if (user && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [user]);
+
   // Session Monitor (Single Device Check)
   useEffect(() => {
     if (!user || !user.uid) return;

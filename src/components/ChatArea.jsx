@@ -1,33 +1,86 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Smile, Paperclip, MoreVertical, Users, ArrowLeft, Home } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, Users, ArrowLeft, Home, LogOut, UserMinus, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, serverTimestamp, where, doc, getDoc, updateDoc, arrayRemove, getDocs } from 'firebase/firestore';
 
 const ChatArea = ({ user, activeGroupId, onBack }) => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
+  const [groupData, setGroupData] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [groupMembers, setGroupMembers] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     if (!activeGroupId) return;
 
-    // Remove orderBy because it requires a manual index in Firebase Console.
-    // We will sort in memory to ensure it works immediately for the user.
+    let isFirstLoad = true;
     const q = query(collection(db, "messages"), where("groupId", "==", activeGroupId));
     const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort in memory - handle null createdAt by putting them at the end
       msgs.sort((a, b) => {
         const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
         const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
         return timeA - timeB;
       });
+      
+      // Show notification for new messages (not on first load and not from current user)
+      if (!isFirstLoad && msgs.length > messages.length) {
+        const newMessage = msgs[msgs.length - 1];
+        if (newMessage.uid !== user?.uid && 'Notification' in window && Notification.permission === 'granted') {
+          // Only show if tab is not focused
+          if (document.hidden) {
+            new Notification(`${newMessage.sender} in ${groupData?.name || 'Group'}`, {
+              body: newMessage.text,
+              icon: '/favicon.ico',
+              tag: 'new-message'
+            });
+          }
+        }
+      }
+      
       setMessages(msgs);
+      isFirstLoad = false;
     });
 
     return () => unsubscribeSnapshot();
+  }, [activeGroupId, messages.length, user?.uid, groupData?.name]);
+
+  // Fetch group data
+  useEffect(() => {
+    if (!activeGroupId) return;
+    
+    const fetchGroup = async () => {
+      try {
+        const groupDoc = await getDoc(doc(db, "groups", activeGroupId));
+        if (groupDoc.exists()) {
+          setGroupData({ id: groupDoc.id, ...groupDoc.data() });
+        }
+      } catch (err) {
+        console.error("Error fetching group:", err);
+      }
+    };
+    
+    fetchGroup();
   }, [activeGroupId]);
+
+  // Fetch group members details
+  const fetchGroupMembers = async () => {
+    if (!groupData?.members) return;
+    
+    try {
+      const usersQuery = query(collection(db, "users"));
+      const snapshot = await getDocs(usersQuery);
+      const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const members = allUsers.filter(u => groupData.members.includes(u.id));
+      setGroupMembers(members);
+    } catch (err) {
+      console.error("Error fetching members:", err);
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,6 +104,39 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
     }
   };
 
+  const handleLeaveGroup = async () => {
+    if (window.confirm(`Are you sure you want to leave "${groupData?.name}"?`)) {
+      try {
+        const groupRef = doc(db, "groups", activeGroupId);
+        await updateDoc(groupRef, {
+          members: arrayRemove(user.uid)
+        });
+        onBack();
+      } catch (err) {
+        console.error("Error leaving group:", err);
+        alert("Failed to leave group.");
+      }
+    }
+  };
+
+  const handleRemoveMember = async (memberId, memberUsername) => {
+    if (window.confirm(`Remove ${memberUsername} from "${groupData?.name}"?`)) {
+      try {
+        const groupRef = doc(db, "groups", activeGroupId);
+        await updateDoc(groupRef, {
+          members: arrayRemove(memberId)
+        });
+        // Refresh member list
+        await fetchGroupMembers();
+      } catch (err) {
+        console.error("Error removing member:", err);
+        alert("Failed to remove member.");
+      }
+    }
+  };
+
+  const isAdmin = groupData?.admin === user.uid;
+
   if (!activeGroupId) {
        return (
         <div className="hidden md:flex flex-1 items-center justify-center bg-white/5 text-gray-400">
@@ -64,10 +150,9 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
 
   return (
     <div className="flex flex-1 flex-col bg-white/[0.01] relative h-full overflow-hidden">
-      {/* Header - Optimized for stability */}
+      {/* Header */}
       <div className="flex h-16 md:h-20 shrink-0 items-center justify-between border-b border-white/5 bg-black/20 px-4 md:px-6 backdrop-blur-xl z-20">
         <div className="flex items-center">
-          {/* Mobile Back Button */}
           <button 
             onClick={onBack}
             className="mr-3 rounded-xl bg-white/5 p-2 text-gray-400 hover:bg-white/10 hover:text-white md:hidden transition-all"
@@ -82,15 +167,14 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#0f172a] bg-green-500"></div>
           </div>
           <div>
-            <h2 className="text-sm font-bold md:text-lg tracking-tight">Group Chat</h2>
+            <h2 className="text-sm font-bold md:text-lg tracking-tight">{groupData?.name || "Group Chat"}</h2>
             <div className="flex items-center text-[10px] md:text-xs text-green-400 font-medium">
                 <span className="mr-1.5 flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                Secure Connection
+                {groupData?.members?.length || 0} Members
             </div>
           </div>
         </div>
-        <div className="flex space-x-2 text-gray-400">
-           {/* Home button - go back to group selection */}
+        <div className="flex space-x-2 text-gray-400 relative">
            <button 
               onClick={onBack}
               title="Back to Groups"
@@ -98,13 +182,45 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
            >
                <Home size={20} />
            </button>
-           <button className="rounded-full p-2 hover:bg-white/5 hover:text-white transition">
+           <button 
+              onClick={() => setShowMenu(!showMenu)}
+              className="rounded-full p-2 hover:bg-white/5 hover:text-white transition"
+           >
                <MoreVertical size={20} />
            </button>
+           
+           {/* Dropdown Menu */}
+           {showMenu && (
+             <div className="absolute right-0 top-12 bg-[#0f172a]/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl p-2 min-w-[200px] z-50">
+               <button
+                 onClick={() => {
+                   handleLeaveGroup();
+                   setShowMenu(false);
+                 }}
+                 className="w-full flex items-center px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition"
+               >
+                 <LogOut size={16} className="mr-3" />
+                 Leave Group
+               </button>
+               {isAdmin && (
+                 <button
+                   onClick={() => {
+                     fetchGroupMembers();
+                     setShowMembersModal(true);
+                     setShowMenu(false);
+                   }}
+                   className="w-full flex items-center px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition"
+                 >
+                   <UserMinus size={16} className="mr-3" />
+                   Manage Members
+                 </button>
+               )}
+             </div>
+           )}
         </div>
       </div>
 
-      {/* Messages - Improved scroll container */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 scroll-smooth" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
         <AnimatePresence>
           {messages.map((msg, idx) => {
@@ -172,7 +288,6 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
                 : 'bg-gray-700/50 shadow-none cursor-not-allowed'
             }`}
           >
-            {/* Glow effect */}
             {inputText.trim() && (
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
             )}
@@ -180,10 +295,72 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
           </motion.button>
         </div>
       </div>
+
+      {/* Members Management Modal */}
+      {showMembersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0f172a]/95 p-6 text-white shadow-2xl backdrop-blur-3xl"
+          >
+            <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex items-center">
+                <div className="mr-3 rounded-xl bg-indigo-500/20 p-2 text-indigo-300">
+                  <Users size={20} />
+                </div>
+                <h2 className="text-xl font-black uppercase tracking-tight">Manage Members</h2>
+              </div>
+              <button onClick={() => setShowMembersModal(false)} className="rounded-full p-2 hover:bg-white/5 transition text-gray-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {groupMembers.map((member) => (
+                <div key={member.id} className="flex items-center justify-between rounded-2xl bg-white/[0.02] p-3 border border-white/5">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-lg font-black text-white mr-3">
+                      {member.username[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{member.username}</p>
+                      {member.id === groupData?.admin && (
+                        <div className="flex items-center text-[9px] text-yellow-400 font-bold uppercase">
+                          <Shield size={10} className="mr-1" />
+                          Admin
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {member.id !== user.uid && (
+                    <button
+                      onClick={() => handleRemoveMember(member.id, member.username)}
+                      className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                    >
+                      Remove
+                    </button>
+                  )}
+                  
+                  {member.id === user.uid && (
+                    <span className="text-[9px] text-gray-500 font-bold uppercase">You</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowMembersModal(false)}
+              className="w-full mt-6 rounded-2xl bg-white/5 py-3 hover:bg-white/10 transition text-sm font-bold uppercase tracking-widest border border-white/5"
+            >
+              Close
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default ChatArea;
-
-
