@@ -92,14 +92,14 @@ const AdminPanel = ({ onClose }) => {
     <div className="flex h-full w-full flex-col overflow-hidden bg-[#0f172a]/50 text-white">
         {/* Header Section */}
         <div className="flex flex-col border-b border-white/10 bg-white/5">
-            <div className="flex items-center justify-between p-6">
+            <div className="flex items-center justify-between p-4 md:p-6">
                 <div className="flex items-center">
-                    <div className="mr-4 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 p-3 shadow-lg shadow-red-500/20">
-                        <Shield size={28} className="text-white" />
+                    <div className="mr-3 md:mr-4 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 p-2.5 md:p-3 shadow-lg shadow-red-500/20">
+                        <Shield size={24} className="text-white md:w-7 md:h-7" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black uppercase tracking-tight">Command Center</h2>
-                        <p className="text-xs font-medium text-gray-400">System Administration & Controls</p>
+                        <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight">Command Center</h2>
+                        <p className="text-[10px] md:text-xs font-medium text-gray-400">System Administration & Controls</p>
                     </div>
                 </div>
             </div>
@@ -127,7 +127,7 @@ const AdminPanel = ({ onClose }) => {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-white/5 bg-black/20 p-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-white/5 bg-black/20 p-4 md:p-6">
             <div className="relative w-full max-w-lg">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input 
@@ -138,10 +138,10 @@ const AdminPanel = ({ onClose }) => {
                     className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-sm text-white placeholder-gray-500 focus:border-primary/50 focus:bg-white/10 focus:outline-none transition-all"
                 />
             </div>
-            <div className="flex items-center space-x-4">
-                <div className="rounded-lg bg-primary/10 px-4 py-2 border border-primary/20">
-                    <span className="text-xs text-gray-400 mr-2 uppercase">Total {activeTab}</span>
-                    <span className="text-lg font-black text-primary">{data.length}</span>
+            <div className="flex w-full md:w-auto items-center justify-between md:justify-end space-x-4">
+                <div className="rounded-lg bg-primary/10 px-4 py-2 border border-primary/20 flex items-center">
+                    <span className="text-[10px] md:text-xs text-gray-400 mr-2 uppercase">Total {activeTab}</span>
+                    <span className="text-base md:text-lg font-black text-primary">{data.length}</span>
                 </div>
                 <button 
                     onClick={fetchData}
@@ -154,7 +154,7 @@ const AdminPanel = ({ onClose }) => {
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
             {loading ? (
                 <div className="flex h-64 items-center justify-center space-x-3">
                     <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]"></div>
@@ -174,24 +174,24 @@ const AdminPanel = ({ onClose }) => {
                                 className="group flex flex-col justify-between rounded-2xl border border-white/5 bg-white/5 p-5 transition-all hover:border-primary/30 hover:bg-white/10"
                             >
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center">
-                                        <div className={`flex h-12 w-12 items-center justify-center rounded-xl font-black text-xl shadow-inner ${
+                                    <div className="flex items-center flex-1 min-w-0 mr-3">
+                                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-black text-xl shadow-inner ${
                                             activeTab === "users" ? 'bg-indigo-500/20 text-indigo-400' : 'bg-emerald-500/20 text-emerald-400'
                                         }`}>
                                             {activeTab === "users" ? item.username[0].toUpperCase() : item.name[0].toUpperCase()}
                                         </div>
-                                        <div className="ml-4">
-                                            <h3 className="text-lg font-bold flex items-center">
+                                        <div className="ml-3 md:ml-4 flex-1 min-w-0">
+                                            <h3 className="text-base md:text-lg font-bold flex items-center truncate">
                                                 {activeTab === "users" ? item.username : item.name}
                                                 {activeTab === "users" && item.isAdmin && (
-                                                    <Shield size={14} className="ml-2 text-red-400" />
+                                                    <Shield size={14} className="ml-2 text-red-400 shrink-0" />
                                                 )}
                                             </h3>
-                                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">{item.id.slice(0, 12)}...</p>
+                                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest truncate">{item.id}</p>
                                         </div>
                                     </div>
                                     
-                                    <div className="flex space-x-2">
+                                    <div className="flex space-x-2 shrink-0">
                                         {activeTab === "users" ? (
                                             <>
                                                 <button 
