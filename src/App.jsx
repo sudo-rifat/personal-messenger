@@ -14,7 +14,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('account');
 
   // Initial LocalStorage Check
   useEffect(() => {
@@ -54,8 +54,11 @@ function App() {
             
             // Logout if token doesn't match OR if activeToken has been cleared (Revoked)
             if (currentLocalToken && (!data.activeToken || data.activeToken !== currentLocalToken)) {
-                alert("Your session has ended. Either you logged in elsewhere or the device was removed.");
-                handleLogout();
+                handleLogout(); // Clear state immediately to show login screen
+                // Use setTimeout to allow UI to update before blocking with alert
+                setTimeout(() => {
+                    alert("Your session has ended. Either you logged in elsewhere or the device was removed.");
+                }, 100);
             }
             
             // Update user state with latest data (e.g. devices list changes)
@@ -297,19 +300,20 @@ function App() {
             onLogout={handleLogout} 
             activeGroup={activeGroupId}
             setActiveGroup={setActiveGroupId}
-            onSettingsClick={() => setShowSettings(true)}
-            onAdminClick={() => setShowAdmin(true)}
+            onSettingsClick={() => { setSettingsTab('account'); setShowSettings(true); }}
+            onAdminClick={() => { setSettingsTab('admin'); setShowSettings(true); }}
           />
           <ChatArea user={user} activeGroupId={activeGroupId} onBack={() => setActiveGroupId(null)} />
         </div>
       </div>
       
       {showSettings && (
-        <SettingsModal user={user} onClose={() => setShowSettings(false)} onLogout={handleLogout} />
-      )}
-
-      {showAdmin && user.isAdmin && (
-        <AdminPanel onClose={() => setShowAdmin(false)} />
+        <SettingsModal 
+            user={user} 
+            onClose={() => setShowSettings(false)} 
+            onLogout={handleLogout} 
+            initialTab={settingsTab}
+        />
       )}
     </Layout>
   );

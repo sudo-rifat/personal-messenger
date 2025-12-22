@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Settings, LogOut, Shield, Users } from 'lucide-react';
+import { Users, Plus, Settings, Shield, Menu, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -8,6 +8,8 @@ import CreateJoinGroup from './CreateJoinGroup';
 const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick, onAdminClick }) => {
   const [groups, setGroups] = useState([]);
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = React.useRef(null);
 
   const fetchGroups = async () => {
     if (!user) return;
@@ -25,6 +27,23 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
     fetchGroups();
   }, [user]);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
   return (
     <>
     <div className={`flex h-full flex-col items-stretch border-r border-white/5 bg-black/20 py-4 md:py-8 transition-all duration-500 backdrop-blur-3xl shrink-0 ${
@@ -32,17 +51,62 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
     }`}>
 
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between px-2">
-        <div className="flex flex-col">
-            <h1 className={`${activeGroup ? 'hidden md:block' : 'block'} text-2xl font-black tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent`}>Groups</h1>
-            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-0.5">Community</p>
+      <div className="flex items-center justify-between border-b border-white/5 p-4 md:p-6">
+        <div className="flex items-center">
+          <div className="mr-3 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-2.5 text-indigo-300">
+            <Users size={22} />
+          </div>
+          <h1 className="text-lg font-black uppercase tracking-tight md:text-xl">Groups</h1>
         </div>
-        <button 
-            onClick={() => setShowGroupModal(true)}
-            className="rounded-2xl bg-white/5 p-3 text-primary transition-all hover:bg-primary hover:text-white shadow-lg hover:shadow-primary/20"
-        >
-          <Plus size={20} />
-        </button>
+        
+        <div className="flex items-center space-x-2">
+          {/* Plus Button */}
+          <button 
+              onClick={() => setShowGroupModal(true)}
+              className="rounded-xl p-2 text-primary hover:bg-white/5 hover:text-white transition"
+          >
+            <Plus size={20} />
+          </button>
+
+          {/* Menu Button */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="rounded-xl p-2 text-gray-400 hover:bg-white/5 hover:text-white transition"
+            >
+              {showMenu ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div className="absolute right-0 top-12 bg-[#0f172a]/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl p-2 min-w-[200px] z-50">
+                <button
+                  onClick={() => {
+                    onSettingsClick();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition"
+                >
+                  <Settings size={16} className="mr-3" />
+                  Settings
+                </button>
+                
+                {user.isAdmin && (
+                  <button
+                    onClick={() => {
+                      onAdminClick();
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                  >
+                    <Shield size={16} className="mr-3" />
+                    Command Center
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Groups List */}
@@ -86,28 +150,6 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
                 <p className="text-[10px] mt-2">Join a group to start chatting</p>
             </div>
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="mt-6 space-y-1 border-t border-white/5 pt-6">
-        {user.isAdmin && (
-            <button 
-                onClick={onAdminClick}
-                className="flex w-full items-center rounded-xl bg-red-500/5 p-3 text-red-400 transition-all hover:bg-red-500 hover:text-white group"
-            >
-                <Shield size={20} className="shrink-0" />
-                <span className={`ml-3 ${activeGroup ? 'hidden md:block' : 'block'} text-xs font-black uppercase tracking-widest`}>Command Center</span>
-            </button>
-        )}
-        
-        <button 
-            onClick={onSettingsClick}
-            className="flex w-full items-center p-3 text-gray-400 transition-all hover:text-white group"
-        >
-          <Settings size={20} className="shrink-0" />
-          <span className={`ml-3 ${activeGroup ? 'hidden md:block' : 'block'} text-sm font-semibold`}>Account Settings</span>
-        </button>
-
       </div>
     </div>
 

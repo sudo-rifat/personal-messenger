@@ -1,10 +1,18 @@
-import React from 'react';
-import { X, Smartphone, Monitor, Trash2, AlertTriangle, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Smartphone, Monitor, Trash2, AlertTriangle, LogOut, User, Shield, Lock, Bell, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import AdminPanel from './AdminPanel';
 
-const SettingsModal = ({ user, onClose, onLogout }) => {
+const SettingsModal = ({ user, onClose, onLogout, initialTab = 'account' }) => {
+  const [activeTab, setActiveTab] = useState(initialTab); // account, security, admin
+
+  // Update active tab if initialTab changes prop (e.g. reopening)
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   if (!user) return null;
 
   const handleRemoveDevice = async (deviceId) => {
@@ -15,7 +23,6 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
             
             const updatePayload = { devices: updatedDevices };
             
-            // If we are removing the CURRENT active device session, clear activeToken
             if (deviceId === user.activeToken) {
                 updatePayload.activeToken = "";
             }
@@ -39,7 +46,6 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
     if (window.confirm(`CAUTION: This will log out ${otherDevicesCount} other device(s). Only your current device will remain active. Proceed?`)) {
         try {
             const userRef = doc(db, "users", user.uid);
-            // Keep only current device
             const currentDevice = user.devices.find(d => d.id === user.activeToken);
             const updatedDevices = currentDevice ? [currentDevice] : [];
             
@@ -51,132 +57,187 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
     }
   };
 
+  const navItems = [
+    { id: 'account', label: 'My Account', icon: User },
+    { id: 'security', label: 'Security & Login', icon: Lock },
+    { id: 'appearance', label: 'Appearance', icon: Palette, disabled: true },
+    { id: 'notifications', label: 'Notifications', icon: Bell, disabled: true },
+  ];
+
+  if (user.isAdmin) {
+    navItems.push({ id: 'admin', label: 'Command Center', icon: Shield, highlight: true });
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0f172a]/95 p-6 text-white shadow-2xl backdrop-blur-3xl"
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="flex h-[85vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-[#0f172a] text-white shadow-2xl flex-col md:flex-row"
       >
-        <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
-          <div className="flex items-center">
-             <div className="mr-3 rounded-xl bg-primary/20 p-2 text-primary">
-                <Smartphone size={20} />
-             </div>
-             <h2 className="text-xl font-black uppercase tracking-tight">Account Settings</h2>
+        {/* Sidebar */}
+        <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-white/5 bg-[#0b1121] p-4 md:p-6 flex flex-row md:flex-col overflow-x-auto md:overflow-visible">
+          <h2 className="hidden md:block mb-8 text-xl font-black uppercase tracking-tight pl-2">Settings</h2>
+          
+          <div className="flex flex-row md:flex-col space-x-2 md:space-x-0 md:space-y-1 flex-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => !item.disabled && setActiveTab(item.id)}
+                disabled={item.disabled}
+                className={`flex shrink-0 items-center rounded-xl p-3 text-sm font-semibold transition-all whitespace-nowrap ${
+                  activeTab === item.id 
+                    ? item.highlight 
+                        ? 'bg-red-500/10 text-red-500 shadow-lg shadow-red-500/10' 
+                        : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
+                    : item.disabled
+                        ? 'text-gray-600 cursor-not-allowed hidden md:flex'
+                        : item.highlight
+                            ? 'text-red-400 hover:bg-red-500/5'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <item.icon size={18} className="mr-2 md:mr-3" />
+                {item.label}
+              </button>
+            ))}
           </div>
-          <button onClick={onClose} className="rounded-full p-2 hover:bg-white/5 transition text-gray-400 hover:text-white">
-            <X size={20} />
+
+          <button 
+            onClick={onLogout}
+            className="hidden md:flex mt-6 w-full items-center rounded-xl border border-white/5 bg-white/[0.02] p-3 text-sm font-bold text-gray-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400 transition-all"
+          >
+            <LogOut size={18} className="mr-3" />
+            Sign Out
           </button>
         </div>
 
-        <div className="space-y-6">
-          {/* User Info */}
-          <div>
-            <h3 className="mb-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Your Profile</h3>
-            <div className="flex items-center rounded-2xl bg-white/[0.02] p-4 border border-white/5 shadow-inner">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-blue-500/20">
-                    {user.username[0].toUpperCase()}
-                </div>
-                <div className="ml-4">
-                    <p className="font-black text-xl tracking-tight text-white">{user.username}</p>
-                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {user.uid}</p>
-                </div>
-            </div>
-          </div>
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#0f172a] relative h-full">
+            {/* Close Button */}
+            <button 
+                onClick={onClose}
+                className="absolute top-4 right-4 md:top-6 md:right-6 z-10 rounded-full bg-black/20 p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-all backdrop-blur-sm"
+            >
+                <X size={20} />
+            </button>
 
-          {/* Active Devices */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Active Sessions</h3>
-               <div className="flex items-center text-[9px] text-yellow-500/80 font-bold uppercase tracking-widest bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
-                  <AlertTriangle size={10} className="mr-1" />
-                  Single Device Rule
-               </div>
-            </div>
-            
-            <div className="space-y-3 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                {user.devices && user.devices.length > 0 ? (
-                    user.devices.map((device, index) => (
-                        <div key={index} className={`flex items-center justify-between rounded-2xl p-4 border transition-all ${
-                            device.id === user.activeToken 
-                                ? 'bg-primary/10 border-primary/30 shadow-lg shadow-primary/5' 
-                                : 'bg-white/[0.02] border-white/5'
-                        }`}>
-                            <div className="flex items-center overflow-hidden">
-                                <div className={`mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                                     device.id === user.activeToken ? 'bg-primary text-white' : 'bg-white/5 text-gray-500'
-                                }`}>
-                                    {device.name.toLowerCase().includes("win") ? <Monitor size={20} /> : <Smartphone size={20} />}
+            {/* Content scroller */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-0">
+                
+                {/* Account Details Tab */}
+                {activeTab === 'account' && (
+                    <div className="p-4 md:p-8 max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <h3 className="mb-6 text-2xl font-bold">My Account</h3>
+                        
+                        <div className="flex flex-col md:flex-row items-center p-6 mb-8 rounded-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-white/5 text-center md:text-left">
+                            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-indigo-500/20 mb-4 md:mb-0">
+                                {user.username[0].toUpperCase()}
+                            </div>
+                            <div className="md:ml-6">
+                                <h4 className="text-2xl font-black">{user.username}</h4>
+                                <p className="text-sm font-mono text-indigo-300 mt-1 opacity-70">UID: {user.uid}</p>
+                                <div className="mt-3 flex gap-2 justify-center md:justify-start">
+                                    <span className="px-2 py-1 rounded-lg bg-white/10 text-xs font-bold text-white uppercase tracking-wider">
+                                        {user.isAdmin ? 'Administrator' : 'User'}
+                                    </span>
+                                    <span className="px-2 py-1 rounded-lg bg-green-500/10 text-xs font-bold text-green-400 uppercase tracking-wider border border-green-500/20">
+                                        Active
+                                    </span>
                                 </div>
-                                <div className="overflow-hidden">
-                                    <p className="text-sm font-bold truncate text-gray-200">{device.name}</p>
-                                    <p className="text-[10px] text-gray-500 font-medium">
-                                        {new Date(device.loginTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                            </div>
+                        </div>
+
+                        {/* Mobile Logout Button */}
+                        <button 
+                          onClick={onLogout}
+                          className="md:hidden w-full flex items-center justify-center rounded-xl bg-red-500/10 py-3 text-sm font-bold text-red-400 border border-red-500/20"
+                        >
+                          <LogOut size={18} className="mr-2" />
+                          Sign Out
+                        </button>
+                    </div>
+                )}
+
+                {/* Security Tab */}
+                {activeTab === 'security' && (
+                    <div className="p-4 md:p-8 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+                            <h3 className="text-2xl font-bold">Security & Login</h3>
+                            <button 
+                                onClick={handleDeleteAllOther}
+                                className="w-full md:w-auto px-4 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold uppercase tracking-wider hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                            >
+                                Sign Out All Other Devices
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-yellow-500/5 border border-yellow-500/10 p-4 rounded-xl flex items-start gap-3 mb-6">
+                                <AlertTriangle className="text-yellow-500 shrink-0 mt-0.5" size={18} />
+                                <div>
+                                    <h4 className="text-yellow-500 font-bold text-sm uppercase tracking-wide">Single Device Policy</h4>
+                                    <p className="text-gray-400 text-xs mt-1 leading-relaxed">
+                                        For your security, you can only be logged in on one device at a time. Logging in here will disconnect other sessions.
                                     </p>
                                 </div>
                             </div>
+
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-4 pl-1">Active Sessions</h4>
                             
-                            <div className="flex items-center space-x-2 ml-4">
-                                {device.id === user.activeToken ? (
-                                    <span className="rounded-lg bg-green-500/20 px-2 py-1 text-[9px] font-black uppercase text-green-400 border border-green-500/30">
-                                        Current
-                                    </span>
-                                ) : (
-                                    <button 
-                                        onClick={() => handleRemoveDevice(device.id)}
-                                        className="rounded-lg bg-white/5 p-2 text-gray-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                                        title="Remove Device"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                )}
-                            </div>
+                            {user.devices && user.devices.map((device, index) => (
+                                <div key={index} className={`flex flex-col md:flex-row items-start md:items-center justify-between rounded-2xl p-5 border transition-all gap-4 ${
+                                    device.id === user.activeToken 
+                                        ? 'bg-indigo-500/5 border-indigo-500/30' 
+                                        : 'bg-white/[0.02] border-white/5'
+                                }`}>
+                                    <div className="flex items-center gap-4 w-full md:w-auto overflow-hidden">
+                                        <div className={`h-10 w-10 flex shrink-0 items-center justify-center rounded-xl ${
+                                            device.id === user.activeToken ? 'bg-indigo-500 text-white' : 'bg-white/5 text-gray-500'
+                                        }`}>
+                                            {device.name.toLowerCase().includes("win") ? <Monitor size={20} /> : <Smartphone size={20} />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className={`text-sm font-bold truncate ${device.id === user.activeToken ? 'text-white' : 'text-gray-300'}`}>
+                                                {device.name}
+                                                {device.id === user.activeToken && <span className="ml-2 text-indigo-400 text-[10px]">(Current)</span>}
+                                            </p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5 font-mono truncate">
+                                                {new Date(device.loginTime).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {device.id !== user.activeToken && (
+                                        <button 
+                                            onClick={() => handleRemoveDevice(device.id)}
+                                            className="w-full md:w-auto p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex items-center justify-center bg-white/5 md:bg-transparent"
+                                            title="Revoke Access"
+                                        >
+                                            <Trash2 size={18} className="md:hidden mr-2" />
+                                            <Trash2 size={18} className="hidden md:block" />
+                                            <span className="md:hidden text-sm font-bold">Remove Device</span>
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
                         </div>
-                    ))
-                ) : (
-                    <div className="text-center py-6 opacity-40">
-                        <Smartphone size={32} className="mx-auto mb-2" />
-                        <p className="text-xs font-bold uppercase tracking-widest">No active sessions</p>
                     </div>
                 )}
-            </div>
-            
-            {/* Delete All Other Devices Button */}
-            {user.devices && user.devices.filter(d => d.id !== user.activeToken).length > 0 && (
-                <button
-                    onClick={handleDeleteAllOther}
-                    className="w-full mt-3 rounded-lg bg-red-500/5 py-2.5 text-red-400 hover:bg-red-500/10 transition-all text-xs font-bold uppercase tracking-widest border border-red-500/20 flex items-center justify-center"
-                >
-                    <Trash2 size={14} className="mr-2" />
-                    Delete All Other Devices ({user.devices.filter(d => d.id !== user.activeToken).length})
-                </button>
-            )}
-          </div>
-        </div>
-        
-        <div className="mt-8 space-y-2">
-            <button 
-                onClick={onLogout}
-                className="w-full rounded-2xl bg-red-500/10 py-3 hover:bg-red-500 hover:text-white transition-all text-sm font-bold uppercase tracking-widest border border-red-500/30 text-red-400 flex items-center justify-center"
-            >
-                <LogOut size={18} className="mr-2" />
-                Sign Out
-            </button>
-            
-            <button 
-                onClick={onClose}
-                className="w-full rounded-2xl bg-white/5 py-3 hover:bg-white/10 transition text-sm font-bold uppercase tracking-widest border border-white/5"
-            >
-                Dismiss Settings
-            </button>
-        </div>
 
+                {/* Admin Tab */}
+                {activeTab === 'admin' && user.isAdmin && (
+                    <div className="h-full w-full animate-in fade-in zoom-in-95 duration-300">
+                        <AdminPanel onClose={() => setActiveTab('account')} />
+                    </div>
+                )}
+
+            </div>
+        </div>
       </motion.div>
     </div>
   );
 };
 
 export default SettingsModal;
-

@@ -12,6 +12,7 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [groupMembers, setGroupMembers] = useState([]);
   const messagesEndRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!activeGroupId) return;
@@ -87,6 +88,23 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
     }
   }, [activeGroupId, messages]);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
   const handleSend = async () => {
     if (!inputText.trim() || !user || !activeGroupId) return;
     
@@ -152,7 +170,7 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
   return (
     <div className="flex flex-1 flex-col bg-white/[0.01] relative h-full overflow-hidden">
       {/* Header - Fixed for mobile viewport */}
-      <div className="flex h-16 md:h-20 shrink-0 items-center justify-between border-b border-white/5 bg-black/20 px-4 md:px-6 backdrop-blur-xl z-20" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
+      <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-black/20 px-4 pb-3 md:pb-0 md:h-20 md:px-6 backdrop-blur-xl z-20" style={{ paddingTop: 'max(env(safe-area-inset-top), 1.5rem)' }}>
         <div className="flex items-center">
           <button 
             onClick={onBack}
@@ -175,7 +193,7 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
             </div>
           </div>
         </div>
-        <div className="flex space-x-2 text-gray-400 relative">
+        <div className="flex space-x-2 text-gray-400 relative" ref={menuRef}>
            <button 
               onClick={onBack}
               title="Back to Groups"

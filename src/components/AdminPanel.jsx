@@ -89,12 +89,7 @@ const AdminPanel = ({ onClose }) => {
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0f172a]/95 text-white shadow-2xl"
-      >
+    <div className="flex h-full w-full flex-col overflow-hidden bg-[#0f172a]/50 text-white">
         {/* Header Section */}
         <div className="flex flex-col border-b border-white/10 bg-white/5">
             <div className="flex items-center justify-between p-6">
@@ -103,16 +98,10 @@ const AdminPanel = ({ onClose }) => {
                         <Shield size={28} className="text-white" />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-extrabold tracking-tight">Command Center</h2>
-                        <p className="text-sm text-gray-400">Advanced System Oversight</p>
+                        <h2 className="text-2xl font-black uppercase tracking-tight">Command Center</h2>
+                        <p className="text-xs font-medium text-gray-400">System Administration & Controls</p>
                     </div>
                 </div>
-                <button 
-                  onClick={onClose} 
-                  className="rounded-full bg-white/5 p-2 text-gray-400 hover:bg-red-500 hover:text-white transition-all"
-                >
-                    <X size={24} />
-                </button>
             </div>
 
             {/* Tabs */}
@@ -265,7 +254,6 @@ const AdminPanel = ({ onClose }) => {
                 </div>
             )}
         </div>
-      </motion.div>
     </div>
   );
 };
