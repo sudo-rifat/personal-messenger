@@ -16,7 +16,6 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
   useEffect(() => {
     if (!activeGroupId) return;
 
-    let isFirstLoad = true;
     const q = query(collection(db, "messages"), where("groupId", "==", activeGroupId));
     const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -26,27 +25,11 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
         return timeA - timeB;
       });
       
-      // Show notification for new messages (not on first load and not from current user)
-      if (!isFirstLoad && msgs.length > messages.length) {
-        const newMessage = msgs[msgs.length - 1];
-        if (newMessage.uid !== user?.uid && 'Notification' in window && Notification.permission === 'granted') {
-          // Only show if tab is not focused
-          if (document.hidden) {
-            new Notification(`${newMessage.sender} in ${groupData?.name || 'Group'}`, {
-              body: newMessage.text,
-              icon: '/favicon.ico',
-              tag: 'new-message'
-            });
-          }
-        }
-      }
-      
       setMessages(msgs);
-      isFirstLoad = false;
     });
 
     return () => unsubscribeSnapshot();
-  }, [activeGroupId, messages.length, user?.uid, groupData?.name]);
+  }, [activeGroupId]);
 
   // Fetch group data
   useEffect(() => {
@@ -85,6 +68,24 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Update last seen when viewing messages
+  useEffect(() => {
+    if (!activeGroupId || messages.length === 0) return;
+    
+    // Get timestamp of latest message
+    const latestMessage = messages[messages.length - 1];
+    const latestTime = latestMessage.createdAt?.toMillis?.() || Date.now();
+    
+    // Update last seen in localStorage
+    try {
+      const lastSeen = JSON.parse(localStorage.getItem('skylark_last_seen_messages') || '{}');
+      lastSeen[activeGroupId] = latestTime;
+      localStorage.setItem('skylark_last_seen_messages', JSON.stringify(lastSeen));
+    } catch (err) {
+      console.error('Failed to update last seen:', err);
+    }
+  }, [activeGroupId, messages]);
 
   const handleSend = async () => {
     if (!inputText.trim() || !user || !activeGroupId) return;
@@ -150,8 +151,8 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
 
   return (
     <div className="flex flex-1 flex-col bg-white/[0.01] relative h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex h-16 md:h-20 shrink-0 items-center justify-between border-b border-white/5 bg-black/20 px-4 md:px-6 backdrop-blur-xl z-20">
+      {/* Header - Fixed for mobile viewport */}
+      <div className="flex h-16 md:h-20 shrink-0 items-center justify-between border-b border-white/5 bg-black/20 px-4 md:px-6 backdrop-blur-xl z-20" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
         <div className="flex items-center">
           <button 
             onClick={onBack}

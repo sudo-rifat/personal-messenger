@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Shield, Search, User, Filter, Users, Hash, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, Trash2, Shield, Search, User, Filter, Users, Hash, AlertTriangle, CheckCircle, Edit, UserMinus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { collection, getDocs, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy, updateDoc, arrayRemove } from 'firebase/firestore';
 
 const AdminPanel = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState("users"); // "users" or "groups"
+  const [activeTab, setActiveTab] = useState("users");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [editingGroupName, setEditingGroupName] = useState("");
+  const [groupMembers, setGroupMembers] = useState([]);
 
   const fetchData = async () => {
     setLoading(true);

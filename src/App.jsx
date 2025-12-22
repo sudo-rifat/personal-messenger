@@ -7,7 +7,7 @@ import Auth from './components/Auth';
 import SettingsModal from './components/SettingsModal'; 
 import AdminPanel from './components/AdminPanel';
 import { db } from './firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, getDoc, Timestamp } from 'firebase/firestore';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -64,7 +64,179 @@ function App() {
     });
 
     return () => unsub();
-  }, [user?.uid]); // Only re-subscribe if UID changes
+  }, [user?.uid]);
+
+  // Helper: Show notification
+  const showNotification = async (message, groupName) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const notification = new Notification(
+          `${message.sender} in ${groupName}`,
+          {
+            body: message.text,
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            tag: `msg-${message.id}`,
+            requireInteraction: false,
+            timestamp: message.createdAt?.toMillis?.() || Date.now()
+          }
+        );
+        
+        notification.onclick = () => {
+          window.focus();
+        };
+      } catch (err) {
+        console.error('Notification error:', err);
+      }
+    }
+  };
+
+  // Helper: Get last seen timestamp for a group
+  const getLastSeen = (groupId) => {
+    try {
+      const lastSeen = JSON.parse(localStorage.getItem('skylark_last_seen_messages') || '{}');
+      return lastSeen[groupId] || 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  // Helper: Update last seen timestamp
+  const updateLastSeen = (groupId, timestamp) => {
+    try {
+      const lastSeen = JSON.parse(localStorage.getItem('skylark_last_seen_messages') || '{}');
+      lastSeen[groupId] = timestamp;
+      localStorage.setItem('skylark_last_seen_messages', JSON.stringify(lastSeen));
+    } catch (err) {
+      console.error('Failed to update last seen:', err);
+    }
+  };
+
+  // Check for missed messages on reconnect
+  const checkMissedMessages = async () => {
+    if (!user?.uid) return;
+
+    const lastOnline = parseInt(localStorage.getItem('skylark_last_online') || '0');
+    if (!lastOnline) return;
+
+    try {
+      // Query messages created after last online time
+      const lastOnlineDate = new Date(lastOnline);
+      const q = query(
+        collection(db, "messages"),
+        where("createdAt", ">", Timestamp.fromDate(lastOnlineDate))
+      );
+      
+      const snapshot = await getDocs(q);
+      const missedMessages = [];
+      
+      snapshot.docs.forEach(doc => {
+        const msg = { id: doc.id, ...doc.data() };
+        // Only include messages not from current user
+        if (msg.uid !== user.uid) {
+          missedMessages.push(msg);
+        }
+      });
+
+      // Group by groupId
+      const groupedMessages = {};
+      missedMessages.forEach(msg => {
+        if (!groupedMessages[msg.groupId]) {
+          groupedMessages[msg.groupId] = [];
+        }
+        groupedMessages[msg.groupId].push(msg);
+      });
+
+      // Show notifications for each group
+      for (const [groupId, messages] of Object.entries(groupedMessages)) {
+        try {
+          const groupDoc = await getDoc(doc(db, "groups", groupId));
+          const groupName = groupDoc.exists() ? groupDoc.data().name : 'Group';
+          
+          // Show summary if more than 3 messages
+          if (messages.length > 3) {
+            showNotification({
+              sender: 'Updates',
+              text: `${messages.length} new messages while you were away`,
+              id: `group-${groupId}-summary`
+            }, groupName);
+          } else {
+            // Show individual notifications
+            messages.forEach(msg => showNotification(msg, groupName));
+          }
+        } catch (err) {
+          console.error('Error fetching group for notification:', err);
+        }
+      }
+
+      // Clear last_online flag
+      localStorage.removeItem('skylark_last_online');
+    } catch (err) {
+      console.error('Error checking missed messages:', err);
+    }
+  };
+
+  // Global message listener for real-time notifications
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const q = query(collection(db, "messages"));
+    const unsubMessages = onSnapshot(q, async (snapshot) => {
+      for (const change of snapshot.docChanges()) {
+        if (change.type === "added") {
+          const msg = { id: change.doc.id, ...change.doc.data() };
+          
+          // Skip if from current user or currently viewing this chat
+          if (msg.uid === user.uid || msg.groupId === activeGroupId) {
+            continue;
+          }
+
+          // Check last seen to avoid duplicate notifications
+          const lastSeen = getLastSeen(msg.groupId);
+          const msgTime = msg.createdAt?.toMillis?.() || 0;
+          
+          if (msgTime > lastSeen) {
+            // Fetch group name and show notification
+            try {
+              const groupDoc = await getDoc(doc(db, "groups", msg.groupId));
+              if (groupDoc.exists()) {
+                const groupName = groupDoc.data().name;
+                showNotification(msg, groupName);
+              }
+            } catch (err) {
+              console.error('Error showing notification:', err);
+            }
+          }
+        }
+      }
+    });
+
+    return () => unsubMessages();
+  }, [user?.uid, activeGroupId]);
+
+  // Online/Offline detection
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const handleOnline = () => {
+      checkMissedMessages();
+    };
+    
+    const handleOffline = () => {
+      localStorage.setItem('skylark_last_online', Date.now().toString());
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Check on mount in case we just came back online
+    checkMissedMessages();
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [user?.uid]);
 
   const handleLogout = () => {
     localStorage.removeItem("skylark_user");
