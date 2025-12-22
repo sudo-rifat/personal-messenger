@@ -1,10 +1,10 @@
 import React from 'react';
-import { X, Smartphone, Monitor, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Smartphone, Monitor, Trash2, AlertTriangle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
-const SettingsModal = ({ user, onClose }) => {
+const SettingsModal = ({ user, onClose, onLogout }) => {
   if (!user) return null;
 
   const handleRemoveDevice = async (deviceId) => {
@@ -122,7 +122,15 @@ const SettingsModal = ({ user, onClose }) => {
           </div>
         </div>
         
-        <div className="mt-8">
+        <div className="mt-8 space-y-2">
+            <button 
+                onClick={onLogout}
+                className="w-full rounded-2xl bg-red-500/10 py-3 hover:bg-red-500 hover:text-white transition-all text-sm font-bold uppercase tracking-widest border border-red-500/30 text-red-400 flex items-center justify-center"
+            >
+                <LogOut size={18} className="mr-2" />
+                Sign Out
+            </button>
+            
             <button 
                 onClick={onClose}
                 className="w-full rounded-2xl bg-white/5 py-3 hover:bg-white/10 transition text-sm font-bold uppercase tracking-widest border border-white/5"

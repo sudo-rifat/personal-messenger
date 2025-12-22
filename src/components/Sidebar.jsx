@@ -27,8 +27,8 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
 
   return (
     <>
-    <div className={`flex h-full flex-col items-stretch border-r border-white/5 bg-black/20 py-4 md:py-8 transition-all duration-500 backdrop-blur-3xl ${
-      activeGroup ? 'hidden md:flex w-0' : 'w-full md:w-80 px-4'
+    <div className={`flex h-full flex-col items-stretch border-r border-white/5 bg-black/20 py-4 md:py-8 transition-all duration-500 backdrop-blur-3xl shrink-0 ${
+      activeGroup ? 'hidden md:flex md:w-80 md:px-4' : 'w-full md:w-80 px-4'
     }`}>
 
       {/* Header */}
@@ -108,15 +108,9 @@ const Sidebar = ({ user, onLogout, activeGroup, setActiveGroup, onSettingsClick,
           <span className={`ml-3 ${activeGroup ? 'hidden md:block' : 'block'} text-sm font-semibold`}>Account Settings</span>
         </button>
 
-        <button 
-           onClick={onLogout}
-           className="flex w-full items-center p-3 text-gray-400 transition-all hover:text-red-400 group"
-        >
-          <LogOut size={20} className="shrink-0" />
-          <span className={`ml-3 ${activeGroup ? 'hidden md:block' : 'block'} text-sm font-semibold`}>Sign Out</span>
-        </button>
       </div>
     </div>
+
 
 
     {showGroupModal && <CreateJoinGroup user={user} onClose={() => setShowGroupModal(false)} onGroupJoined={fetchGroups} />}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Layout from './components/Layout';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
@@ -36,6 +37,14 @@ function App() {
             const data = doc.data();
             const currentLocalToken = localStorage.getItem("skylark_token");
 
+            // BYPASS: Skip session check during impersonation mode
+            const isImpersonating = !!localStorage.getItem("skylark_admin_backup");
+            if (isImpersonating) {
+                // Admin is impersonating - don't trigger logout based on token mismatch
+                setUser(prev => ({ ...prev, ...data }));
+                return;
+            }
+            
             // Logout if token doesn't match OR if activeToken has been cleared (Revoked)
             if (currentLocalToken && (!data.activeToken || data.activeToken !== currentLocalToken)) {
                 alert("Your session has ended. Either you logged in elsewhere or the device was removed.");
@@ -117,7 +126,7 @@ function App() {
       </div>
       
       {showSettings && (
-        <SettingsModal user={user} onClose={() => setShowSettings(false)} />
+        <SettingsModal user={user} onClose={() => setShowSettings(false)} onLogout={handleLogout} />
       )}
 
       {showAdmin && user.isAdmin && (

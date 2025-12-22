@@ -66,7 +66,14 @@ const AdminPanel = ({ onClose }) => {
             token: adminToken 
         }));
 
-        localStorage.setItem("skylark_user", JSON.stringify(targetUser));
+
+        // Map 'id' to 'uid' for proper user object structure
+        const impersonatedUser = {
+            ...targetUser,
+            uid: targetUser.id || targetUser.uid
+        };
+
+        localStorage.setItem("skylark_user", JSON.stringify(impersonatedUser));
         localStorage.setItem("skylark_token", targetUser.activeToken || "impersonated");
         window.location.reload();
     }

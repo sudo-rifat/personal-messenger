@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Users, ArrowLeft } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, Users, ArrowLeft, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where } from 'firebase/firestore';
@@ -90,14 +90,22 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
           </div>
         </div>
         <div className="flex space-x-2 text-gray-400">
+           {/* Home button - go back to group selection */}
+           <button 
+              onClick={onBack}
+              title="Back to Groups"
+              className="hidden md:flex rounded-full p-2 hover:bg-white/5 hover:text-white transition"
+           >
+               <Home size={20} />
+           </button>
            <button className="rounded-full p-2 hover:bg-white/5 hover:text-white transition">
                <MoreVertical size={20} />
            </button>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth custom-scrollbar">
+      {/* Messages - Improved scroll container */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 scroll-smooth" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
         <AnimatePresence>
           {messages.map((msg, idx) => {
             const isMe = user && msg.uid === user.uid;
@@ -154,11 +162,21 @@ const ChatArea = ({ user, activeGroupId, onBack }) => {
             <Smile size={20} />
           </button>
           <motion.button
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleSend}
-            className="rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-3 text-white shadow-lg shadow-blue-500/30 transition hover:brightness-110 active:brightness-90"
+            disabled={!inputText.trim()}
+            className={`relative rounded-2xl p-3.5 text-white shadow-lg transition-all duration-300 overflow-hidden ${
+              inputText.trim() 
+                ? 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 shadow-blue-500/40 hover:shadow-blue-500/60' 
+                : 'bg-gray-700/50 shadow-none cursor-not-allowed'
+            }`}
           >
-            <Send size={18} />
+            {/* Glow effect */}
+            {inputText.trim() && (
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
+            )}
+            <Send size={18} className={`relative z-10 ${inputText.trim() ? '' : 'opacity-50'}`} />
           </motion.button>
         </div>
       </div>
